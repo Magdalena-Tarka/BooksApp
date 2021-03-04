@@ -6,6 +6,7 @@
     booksList: '.books-list',
     coverImage: '.book__image',
     filtersForm: '.filters',
+    book: '.book__image',
   };
 
   const templates = {
@@ -13,26 +14,33 @@
   };
 
   class BookList {
-    constructor(data) {
-      this.data = data;
-      
-      this.initBookList();
+    constructor() {
+      this.data = dataSource.books;
+      this.favoriteBooks = [];
+      this.filters = [];
+        
+      this.renderBookList();
       this.getElements();
       this.initActions();
     }
     
-    initBookList() {
-      this.data = dataSource.books;
-      console.log('this.data:', this.data);
+    renderBookList() {
     
       for(const bookId of this.data) {
-      //console.log('1. bookId:', bookId);
+        //console.log('0. bookId:', bookId);
+          
+        this.rating = bookId.rating;
+        //console.log('1. this.rating:', this.rating);
+          
+        bookId.ratingBgc = this.determineRatingBgc(this.rating);  // bookId. poprostu dodaje właściwośc DONT FORGET!!
+        bookId.ratingWidth = this.rating * 10;
+        //console.log('2. ratingBgc:', bookId.ratingBgc);
+          
         const generatedHTML = templates.booksList(bookId);
-        //console.log('2.', generatedHTML);
+        //console.log('4.', generatedHTML);
         const element = utils.createDOMFromHTML(generatedHTML);
         //console.log('3.', element);
         const booksListContainer = document.querySelector(select.booksList);
-        //console.log('4.', booksListContainer);
         booksListContainer.appendChild(element);
       }
     }
@@ -42,58 +50,97 @@
         booksList: document.querySelector(select.booksList),
         coverImage: document.querySelector(select.coverImage),
         filtersForm: document.querySelector(select.filtersForm),
+        book: document.querySelector(select.book),
       };
     }
     
     initActions() {
-      const favoriteBooks = [];
-      const filters = [];
+      const thisBookList = this;
         
       this.dom.booksList.addEventListener('dblclick', function(event) {
         event.preventDefault();
         
         if(event.target.offsetParent.classList.contains('book__image')) {
-          //console.log('nasłuchiwacz działa!', event.target.offsetParent);
         
           const clickedElem = event.target.offsetParent;
           const clickedBookId = clickedElem.getAttribute('data-id');
             
           if(clickedElem.classList.contains('favorite')) {
             clickedElem.classList.remove('favorite');
-            favoriteBooks.splice(favoriteBooks.indexOf(clickedBookId), 1); // Dlaczego nie odejmujemy 1 od clickedElem, przecież jest wyższy o 1 od index w arr?
-            //console.log('X. favoriteBooks:', favoriteBooks);
+            thisBookList.favoriteBooks.splice(thisBookList.favoriteBooks.indexOf(clickedBookId), 1); // Kamil dlaczego nie odejmujemy 1 od clickedElem, przecież jest wyższy o 1 od index w arr?
+            //console.log('X. favoriteBooks:', thisBookList.favoriteBooks);
               
           } else {
             clickedElem.classList.add('favorite');
-            favoriteBooks.push(clickedBookId);
-            //console.log('XX. favoriteBooks:', favoriteBooks);
+            thisBookList.favoriteBooks.push(clickedBookId);
+            //console.log('XX. favoriteBooks:', thisBookList.favoriteBooks);
           }
         }
       });
         
-      this.dom.filtersForm.addEventListener('click', function(event) {
-        event.preventDefault();
-        const clickedElem = event.target;
-        console.log('1. clickedElem:',clickedElem);
+      this.dom.filtersForm.addEventListener('click', function() {
+        thisBookList.clickedElem = event.target;
+        //console.log('1. clickedElem:',thisBookList.clickedElem);
           
-        if(clickedElem.tagName === 'INPUT' && clickedElem.type === 'checkbox' && clickedElem.name === 'filter') console.log('2. clickedElem.value:', clickedElem.value);
+        if(thisBookList.clickedElem.checked !== undefined) {
+          //console.log('2. clickedElem.value:', thisBookList.clickedElem.value);
           
-        if(clickedElem.checked) {
-          filters.push(clickedElem.value);
-          console.log('X. filters:', filters);
-        } else {
-          filters.splice(filters.indexOf(clickedElem.value), 1);
-          console.log('XX. filters:', filters);
+          if(thisBookList.clickedElem.checked) {
+            thisBookList.filters.push(thisBookList.clickedElem.value);
+            //console.log('X. filters:', thisBookList.filters);
+              
+          } else {
+            thisBookList.filters.splice(thisBookList.filters.indexOf(thisBookList.clickedElem.value), 1);
+            //console.log('XX. filters:', thisBookList.filters);
+          }
+          thisBookList.filterBooks();
         }
-        //this.filterBooks();
       });    
     }
       
-    filterBooks() {}
+    filterBooks() {
+      console.log(this.data);
+        
+      for(const book of this.data) {
+        let shouldBeHidden = false;
+          
+        for(const filter of this.filters) {
+          if(!book.details[filter]) {
+            shouldBeHidden = true;
+            break;
+          }
+        }
+        if(shouldBeHidden) {    // DONT FORGET!! wystarczy wpisać zmienną-wynik true or false
+          document.querySelector('.book__image[data-id="' + book.id + '"]').classList.add('hidden');   // jezeli byłby element dom to referencja prowadzi tylko tylko do szabonu w html, dlatego musi być id konkretnej book
+        } else {      // ZAPAMIĘTAJ TEN PRZYKŁAD!!
+          document.querySelector('.book__image[data-id="' + book.id + '"]').classList.remove('hidden');
+        }
+      }
+    }
       
-    determineRatingBgc() {}
+    determineRatingBgc() {
+      let background = '';
+      if(this.rating <= 6) {
+        background = 'linear-gradient(to bottom,  #fefcea 0%, #f1da36 100%)';
+      } else if(this.rating > 6 && this.rating <= 8) {
+        background = 'linear-gradient(to bottom, #b4df5b 0%,#b4df5b 100%)';
+      } else if(this.rating > 8 && this.rating <= 9) {
+        background = 'linear-gradient(to bottom, #299a0b 0%, #299a0b 100%)';
+      } else if (this.rating > 9) {
+        background = 'linear-gradient(to bottom, #ff0084 0%,#ff0084 100%)';
+      }
+      return background;
+    }
       
   }
-  const app = new BookList();
+  const app = new BookList(dataSource.books);
   console.log(app);
+    
+  /*const app = {
+    initializeProject: function(){
+      new BookList();
+    }
+  };
+  app.initializeProject();*/
+  // Może być jeszcze w ten sposób zapisane, Kamil który sposób jest lepszy?
 }
